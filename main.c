@@ -51,25 +51,63 @@ static inline void spin(volatile uint32_t count) {
     while (count--) (void)0;
 }
 
-extern void _reset(void);
-extern unsigned long _estack;
 
-__attribute__((section(".vectors")))
-void (*const vector_table[])(void) = {
-    (void (*)(void))(&_estack),
-    _reset
+
+struct systick{
+    volatile uint32_t CTRL, LOAD, VAL, CALIB;
 };
+#define SYSTICK ((struct systick *) 0xe000e010)
+
+
+
+
+static inline void systick_init(uint32_t ticks){
+    if ((ticks - 1) > 0xffffff) return; // maximum value is 24 bit (SYSTICK is 24 bit)
+    SYSTICK -> LOAD = ticks - 1;
+    SYSTICK -> VAL = 0;
+    SYSTICK -> CTRL = BIT(0) | BIT(1) | BIT(2); // enable systick
+    RCC -> APB2ENR |= BIT(0); // enable syscfg
+}
+
+
+static volatile uint32_t s_ticks; // volatile is important!!
+void SysTick_Handler(void) {
+  s_ticks++;
+}
+
+
+
+// t: expiration time, prd: period, now: current time. Return true if expired
+bool timer_expired(uint32_t *t, uint32_t prd, uint32_t now) {
+  if (now + prd < *t) *t = 0;                    // Time wrapped? Reset timer
+  if (*t == 0) *t = now + prd;                   // First poll? Set expiration
+  if (*t > now) return false;                    // Not expired yet, return
+  *t = (now - *t) > prd ? now + prd : *t + prd;  // Next expiration time
+  return true;                                   // Expired, return true
+}
+
+
 
 int main(void) {
     uint16_t led = PIN('B', 14);
+    uint16_t led2 = PIN('B', 2);
     RCC->AHB2ENR |= BIT(PINBANK(led)); // Enable GPIOB clock
+    // RCC->AHB2ENR |= BIT(PINBANK(led2)); // Enable GPIOB clock
     gpio_set_mode(led, GPIO_MODE_OUTPUT);
-
+    gpio_set_mode(led2, GPIO_MODE_OUTPUT);
+    systick_init(4000000/1000);
+    uint32_t timer = 0, period = 1000;
     for (;;) {
-        gpio_write(led, true);
-        spin(500000);
-        gpio_write(led, false);
-        spin(500000);
+        if(timer_expired(&timer, period, s_ticks)){
+            static bool light;
+            static bool light2;
+            gpio_write(led, light);
+            gpio_write(led2, light2);
+            light =! light;
+            light2 =! light2;
+
+        }
+        
     }
 }
 
@@ -80,3 +118,9 @@ __attribute__((naked, noreturn)) void _reset(void) {
     main();
     for (;;) (void)0;
 }
+
+extern void _reset(void);
+extern unsigned long _estack;
+__attribute__((section(".vectors"))) 
+void (*const tab[16 + 91])(void) = {
+    (void (*)(void))(&_estack), _reset, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, SysTick_Handler};
