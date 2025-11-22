@@ -2,3 +2,4 @@
 firmware.bin
 firmware.elf
 firmware.elf.map
+.vscode
