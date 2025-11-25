@@ -3,83 +3,96 @@
 #include "gpio.h"
 #include "rcc.h"
 #include "systick.h"
+#include "helper.h"
 
+// gernal puprose timers.
+#define TIM(x) ((struct timer *)(0x40000000 + 0x400 * (x - 2)))
+
+struct timer
+{
+    volatile uint32_t CR1, CR2, SMCR, DIER, SR, EGR, CCMR1, CCMR2,
+        CCER, CNT, PSC, ARR, RCR, CCR1, CCR2, CCR3, CCR4, BDTR, DCR, DMAR;
+};
 
 volatile uint32_t s_ticks = 0;
 
-int main(void) {
+void setup_pwm(struct timer* t2)
+{
+    RCC->APB1ENR1 |= BIT(0);
+    t2->CR1 |= BIT(0) | BIT(1);
 
-    // define the pin
-    uint16_t led1 = PIN('A', 5);
-    uint16_t led2 = PIN('A', 6);
-    uint16_t led3 = PIN('A', 7);
-    uint16_t led4 = PIN('A', 2);
-    uint16_t led5 = PIN('A', 15);
-    uint16_t led6 = PIN('B', 2);
-    uint16_t led7 = PIN('A', 4);
-    uint16_t led8 = PIN('B', 1);
-    uint16_t led9 = PIN('B', 4);
-    uint16_t led10= PIN('B', 9);
+    t2->CCMR1 &= ~(uint32_t)(0xFF);        // clear OC1 fields
+    t2->CCMR1 |= (6 << 4);
 
-    // enable the GPIO PORT in RCC
-    RCC -> AHB2ENR |= BIT(PINBANK(led1));
-    RCC -> AHB2ENR |= BIT(PINBANK(led6));
+     // Enable channel 1 output
+    t2->CCER |= BIT(0);
 
-    // set the mode for the pin
-    gpio_set_mode(led1  , GPIO_MODE_OUTPUT);
-    gpio_set_mode(led2  , GPIO_MODE_OUTPUT);
-    gpio_set_mode(led3  , GPIO_MODE_OUTPUT);
-    gpio_set_mode(led4  , GPIO_MODE_OUTPUT);
-    gpio_set_mode(led5  , GPIO_MODE_OUTPUT);
-    gpio_set_mode(led6  , GPIO_MODE_OUTPUT);
-    gpio_set_mode(led7  , GPIO_MODE_OUTPUT);
-    gpio_set_mode(led8  , GPIO_MODE_OUTPUT);
-    gpio_set_mode(led9  , GPIO_MODE_OUTPUT);
-    gpio_set_mode(led10 , GPIO_MODE_OUTPUT);
+    // Update generation
+    // t2->EGR |= BIT(0);
     
     
-    systick_init(4000000/1000);
+    t2->ARR = 1000;
+    t2->PSC = 4;
+}
 
-    uint32_t timer = 0, period = 500;
-    for (;;) {
-        if(timer_expired(&timer, period, s_ticks)){
-            static bool light1 ;
-            static bool light2 ;
-            static bool light3 ;
-            static bool light4 ;
-            static bool light5 ;
-            static bool light6 ;
-            static bool light7 ;
-            static bool light8 ;
-            static bool light9 ;
-            static bool light10;
-
-            gpio_write(led1, light1);
-            gpio_write(led2, light2);
-            gpio_write(led3, light3);
-            gpio_write(led4, light4);
-            gpio_write(led5, light5);
-            gpio_write(led6, light6);
-            gpio_write(led7, light7);
-            gpio_write(led8, light8);
-            gpio_write(led9, light9);
-            gpio_write(led1, light1);
-            
-            light1  =! light1 ;
-            light2  =! light2 ;
-            light3  =! light3 ;
-            light4  =! light4 ;
-            light5  =! light5 ;
-            light6  =! light6 ;
-            light7  =! light7 ;
-            light8  =! light8 ;
-            light9  =! light9 ;
-            light10 =! light10;
-
-        }
-        
-    }
+void set_duty_cycle(struct timer* t2, uint16_t val){
+    t2->CCR1 = val; 
 }
 
 
+int main(void)
+{
+    uint16_t led = PIN('A', 15);       // Blue LED
+    RCC->AHB2ENR |= BIT(PINBANK(led)); // Enable GPIO clock for LED
 
+    systick_init(4000000 / 1000); // Tick every 1 ms
+
+    gpio_set_mode(led, GPIO_MODE_AF); // Set blue LED to output mode
+    struct gpio* gpioa = GPIO(PINBANK(led));
+    gpioa->AFRH |= BIT(28);
+
+    struct timer* t2 = TIM(2);
+    setup_pwm(t2);
+
+    uint16_t value = 0;
+    set_duty_cycle(t2, value);
+
+
+    uint32_t timer = 0, period = 10; // Declare timer and 500ms period
+    for (;;)
+    {
+        
+        if (timer_expired(&timer, period, s_ticks))
+        {
+            value += 10;
+            if (value >= 1000){
+                for (;;){
+                    value -=10;
+                    set_duty_cycle(t2, value);
+                    if(value <=0 ) break;
+                }
+            };
+            set_duty_cycle(t2, value);
+        }
+        // Here we could perform other activities!
+    }
+    return 0;
+}
+
+
+/**
+ * setup_pwm(){
+ *  enable timer2 prepherial
+ * set timer mode
+ * set the prescaler
+ * set alignment option
+ * set direction
+ * set OC register
+ * enable counter
+ * enable output compare
+ * choose the prescaler
+ * set the ARR (the frequency)
+ * set OC value (the duty cycle)
+ *
+ * }
+ */
