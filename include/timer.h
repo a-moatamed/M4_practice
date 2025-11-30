@@ -11,6 +11,7 @@ struct timer
         CCER, CNT, PSC, ARR, RCR, CCR1, CCR2, CCR3, CCR4, BDTR, DCR, DMAR;
 };
 
+
 void setup_pwm(struct timer* t2);
 
 void set_duty_cycle(struct timer* t2, uint16_t val);
