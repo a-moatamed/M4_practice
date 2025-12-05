@@ -123,89 +123,108 @@
 
 
 
+#ifndef ADC_H
+#define ADC_H
 
-
-#include "rcc.h"
+#include <stdint.h>
 #include "gpio.h"
+#include "rcc.h"
 
-// ADC1 base
-#define ADC ((struct adc* ) 0x50040000)
+// Bits
+#define ADC_CR_DEEPPWD   (1U << 29)
+#define ADC_CR_ADVREGEN  (1U << 28)
+#define ADC_CR_ADCAL     (1U << 31)
+#define ADC_CR_ADEN      (1U << 0)
+#define ADC_CR_ADSTART   (1U << 2)
 
-//#####################################################################
-
-// ADC_CR bits
-#define ADC_CR_DEEPPWD       (1 << 29)
-#define ADC_CR_ADVREGEN      (1 << 28)
-#define ADC_CR_ADCAL         (1u << 31)
-#define ADC_CR_ADEN          (1 << 0)
-#define ADC_CR_ADSTART       (1 << 2)
-
-// ADC_ISR bits
-#define ADC_ISR_ADRDY        (1 << 0)
-#define ADC_ISR_EOC          (1 << 2)
-
-// ADC_CFGR bits
-#define ADC_CFGR_CONT        (1 << 13)
-
+#define ADC_ISR_ADRDY    (1U << 0)
+#define ADC_ISR_EOC      (1U << 2)
 
 struct adc {
-	volatile uint32_t ISR, IER, CR, CFGR, CFGR2,
-	SMPR[2], TR1, TR2, TR3, RESERVED2, SQR1, SQR2,
-	SQR3, SQR4, DR, JSQR, OFR[4], JDR[4], AWD2CR,
-	AWD3CR, DIFSEL, CALFACT;
+    volatile uint32_t ISR, IER, CR, CFGR, CFGR2;
+    volatile uint32_t SMPR[2];
+    volatile uint32_t TR1, TR2, TR3, RESERVED2;
+    volatile uint32_t SQR1, SQR2, SQR3, SQR4;
+    volatile uint32_t DR;
+    volatile uint32_t JSQR;
+    volatile uint32_t OFR[4], JDR[4];
+    volatile uint32_t AWD2CR, AWD3CR, DIFSEL, CALFACT;
 };
 
-// ---------------------------------------------------------------------------
-//  ADC INITIALIZATION (your style, your structs, corrected)
-// ---------------------------------------------------------------------------
-void adc_init(struct adc* adc, uint8_t pin, uint8_t chanel)
-{
-    // 1. Enable GPIO clock for this pin
-    RCC->AHB2ENR |= BIT(PINBANK(pin));
+#define ADC1 ((struct adc*)0x50040000)
 
-    // 2. Set pin to analog mode
+// ---------------------------------------------------------------------------
+// ADC START + READ
+// ---------------------------------------------------------------------------
+static inline uint32_t ADC1_Read(struct adc* adc)
+{
+    while (!(adc->ISR & ADC_ISR_EOC));   // wait end of conversion
+    return adc->DR;                      // reading clears EOC
+}
+
+// ---------------------------------------------------------------------------
+// REAL ADC INITIALISATION (CHANNEL ANY)
+// ---------------------------------------------------------------------------
+
+
+static inline void adc_init(struct adc* adc, uint16_t pin, uint8_t channel)
+{
+    /* enable GPIOC clock + set analog */
+    RCC->AHB2ENR |= (1U << PINBANK(pin));
     gpio_set_mode(pin, GPIO_MODE_ANALOG);
 
-    // 3. Enable ADC1 clock
-    RCC->AHB2ENR |= BIT(13);   // ADCEN
+    /* enable ADC clock */
+    RCC->AHB2ENR |= (1U << 13);   /* ADCEN */
 
-    // 4. Exit deep-power-down mode
+    /* optional: avoid debug freeze */
+    *((volatile uint32_t*)0xE004200C) |= (1U << 5);
+
+    /* if ADC enabled -> disable cleanly */
+    if (adc->CR & ADC_CR_ADEN) {
+        adc->CR |= (1U << 1);           /* ADDIS */
+        while (adc->CR & (1U << 1));    /* wait until cleared */
+    }
+
+    /* exit deep-power-down & enable regulator */
     adc->CR &= ~ADC_CR_DEEPPWD;
-
-    // 5. Enable ADC regulator
     adc->CR |= ADC_CR_ADVREGEN;
+    for (volatile int i = 0; i < 3000; ++i); /* >= ~20 µs */
 
-    // small stabilization delay
-    for (volatile int i = 0; i < 2000; i++);
-
-    // 6. Start ADC calibration
+    /* calibration */
     adc->CR |= ADC_CR_ADCAL;
     while (adc->CR & ADC_CR_ADCAL);
 
-    // 7. Enable ADC
-    adc->ISR |= ADC_ISR_ADRDY;     // clear ADRDY
-    adc->CR  |= ADC_CR_ADEN;
+    /* sampling time, channel may vary - clear field first */
+    if (channel >= 10) {
+        uint32_t pos = (uint32_t)(channel - 10U) * 3U;
+        adc->SMPR[1] &= ~(7U << pos);
+        adc->SMPR[1] |=  (7U << pos);
+    } else {
+        uint32_t pos = (uint32_t)channel * 3U;
+        adc->SMPR[0] &= ~(7U << pos);
+        adc->SMPR[0] |=  (7U << pos);
+    }
 
+    /* regular sequence: L=0, rank1=channel */
+    adc->SQR1 = ((uint32_t)channel << 6);
+
+    /* clear ADRDY flag */
+    adc->ISR |= ADC_ISR_ADRDY;
+
+    /* enable ADC and wait readiness */
+    adc->CR |= ADC_CR_ADEN;
     while (!(adc->ISR & ADC_ISR_ADRDY));
 
-    // 8. Configure channel sequence
-    // Only ONE conversion (L = 0)
-    adc->SQR1 = 0;
-    adc->SQR1 |= ((uint32_t)chanel << 6);
-
-    // 9. Continuous mode
-    adc->CFGR |= ADC_CFGR_CONT;
-
-    // 10. Start conversion
-    adc->CR |= ADC_CR_ADSTART;
+    /* continuous + start */
+    adc->CFGR |= (1U << 13);
+    adc->CR   |= ADC_CR_ADSTART;
 }
 
 
-// ---------------------------------------------------------------------------
-//  ADC READ (your style, corrected)
-// ---------------------------------------------------------------------------
-uint32_t ADC1_Read(struct adc* adc)
-{
-    while (!(adc->ISR & ADC_ISR_EOC));  // wait for end-of-conversion
-    return adc->DR;                     // read result
-}
+
+
+
+
+#endif
+
+
