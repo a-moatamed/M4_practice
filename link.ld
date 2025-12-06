@@ -21,5 +21,8 @@ SECTIONS {
     *(.bss*)
     *(COMMON)
     _ebss = .;
+    _end = .;  /* this must be added to comply the new system calls with printf redirection requirements */
   } > SRAM
+
 }
+
