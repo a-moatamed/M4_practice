@@ -29,7 +29,9 @@ int main(void)
 
     while (1)
     {
-        pot_raw = adc_read_pc5();
+        pot_raw = adc_read_pc5_avg(16); // average 16 samples to smooth noise
+
+        
         printf("READ VALUE: %d\r\n", pot_raw);
         spin(200000); // simple throttle to avoid flooding the UART
     }

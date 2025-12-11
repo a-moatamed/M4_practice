@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "rcc.h"
 #include "gpio.h"
 #include "helper.h"
@@ -42,4 +43,16 @@ static uint16_t adc_read_pc5(void) {
     ADC->CR |= BIT(2);                     // ADSTART
     while ((ADC->ISR & BIT(2)) == 0) (void) 0; // wait EOC
     return (uint16_t) ADC->DR;
+}
+
+// Take multiple back-to-back samples and return their average.
+// Helps reduce noise at the cost of conversion time.
+static uint16_t adc_read_pc5_avg(uint8_t samples) {
+    if (samples == 0) return 0;
+
+    uint32_t acc = 0;
+    for (uint8_t i = 0; i < samples; i++) {
+        acc += adc_read_pc5();
+    }
+    return (uint16_t)(acc / samples);
 }
