@@ -23,13 +23,13 @@ int main(void)
     gpio_set_mode(pot, GPIO_MODE_ANALOG);
     GPIO(PINBANK(pot))->ASCR |= BIT(PINNO(pot));  // Close analog switch for PC5
 
-    adc_init_pc5();
+    adc_init();
 
     volatile uint16_t pot_raw = 0;
 
     while (1)
     {
-        pot_raw = adc_read_pc5_avg(16); // average 16 samples to smooth noise
+        pot_raw = adc_read_avg(16); // average 16 samples to smooth noise
 
         
         printf("READ VALUE: %d\r\n", pot_raw);
