@@ -11,46 +11,26 @@
 
 #include <stdio.h>
 
-
 #define CLOCK 4000000
 
 volatile uint32_t s_ticks = 0;
 
-
-/**
- * the main of this function is to to toggle a led.
- * on-board led(LED2: the green led) is connected to the pin PB14.
- */
 int main(void)
 {
-    // intialize the systick
-    systick_init(CLOCK/1000);
-    uint32_t timer = 0;
-    uint32_t period = 500;
+    uart_init(UART1, 115200);  // set up PB6/PB7 as TX/RX and enable UART1
 
+    uint16_t pot = PIN('C', 5);
+    gpio_set_mode(pot, GPIO_MODE_ANALOG);
+    GPIO(PINBANK(pot))->ASCR |= BIT(PINNO(pot));  // Close analog switch for PC5
 
-    // define the led pin
-    uint16_t led = PIN('B', 14);
-    // choose the mode ### note that the function will enable the RCC port 
-    gpio_set_mode(led, GPIO_MODE_OUTPUT);
-    static bool on = true; // set the flag of the led.
+    adc_init_pc5();
 
-    struct uart* uart = UART1;
-    uart_init(uart, 115200);
-    
+    volatile uint16_t pot_raw = 0;
 
-    
     while (1)
     {
-        if(timer_expired(&timer, period, s_ticks))
-        {
-
-            on = !on;
-            gpio_write(led, on);
-            printf("LED: %d, tick: %lu\r\n", on, s_ticks);  // Write message
-    
-        }
-
-        
+        pot_raw = adc_read_pc5();
+        printf("READ VALUE: %d\r\n", pot_raw);
+        spin(200000); // simple throttle to avoid flooding the UART
     }
 }
