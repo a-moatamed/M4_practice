@@ -8,10 +8,11 @@
 #include "timer.h"
 #include "uart.h"
 #include <stdio.h>
+#include "adc.h"
 
 #define CLOCK 4000000
 
-void led_bar(uint16_t duty_cycle);
+void led_bar(uint32_t duty_cycle);
 
 // define leds
 uint16_t led1 = PIN('A', 4);  // D7
@@ -25,6 +26,18 @@ volatile uint32_t s_ticks = 0;
 
 int main(void)
 {
+
+    uart_init(UART1, 115200);  // set up PB6/PB7 as TX/RX and enable UART1
+
+    uint16_t pot = PIN('C', 5);
+    gpio_set_mode(pot, GPIO_MODE_ANALOG);
+    GPIO(PINBANK(pot))->ASCR |= BIT(PINNO(pot));  // Close analog switch for PC5
+
+    adc_init();
+
+    uint16_t pot_raw = 0;
+
+    
 
     // define time variables
     // uint32_t t = 0;
@@ -44,15 +57,20 @@ int main(void)
 
     // bool on = true;
 
-    uint16_t duty_cycle = 80;
+    uint32_t duty_cycle = 80;
 
     while (1)
     {
+        pot_raw = adc_read_avg(16); // average 16 samples to smooth noise
+        duty_cycle = (uint32_t)((pot_raw * 100) / 4095);
+
         led_bar(duty_cycle);
+        printf("READ VALUE: %ld\r\n", duty_cycle);
+        spin(20000); // simple throttle to avoid flooding the UART
     }
 }
 
-void led_bar(uint16_t duty_cycle)
+void led_bar(uint32_t duty_cycle)
 {
     if (duty_cycle >= 90)
     {
