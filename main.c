@@ -33,8 +33,8 @@ int main(void)
     // setup the ADC
     uint16_t pot = PIN('C', 5);
     gpio_set_mode(pot, GPIO_MODE_ANALOG);
-    GPIO(PINBANK(pot))->ASCR |= BIT(PINNO(pot));  // Close analog switch for PC5
-    adc_init();
+    
+    adc_init(pot);
      
 
 
@@ -47,23 +47,13 @@ int main(void)
     gpio_set_mode(led5, GPIO_MODE_OUTPUT);
     gpio_set_mode(led6, GPIO_MODE_OUTPUT);
 
-    // setup the buzzer
-    struct timer* timer = TIM(2);
-    setup_pwm(timer);
     
-    uint16_t buzzer = PIN('A', 15);
-    gpio_set_mode(buzzer, GPIO_MODE_AF); 
-    gpio_set_af(buzzer, 1);
 
     uint32_t duty_cycle = 0;
 
     while (1)
     {
          duty_cycle = (uint32_t)((adc_read_avg(16) * 100) / 4095);  // average 16 samples to smooth noise
-
-        
-     
-        set_duty_cycle(timer,(uint16_t) duty_cycle * 10);
 
         led_bar(duty_cycle);
         printf("READ VALUE: %lu\r\n", duty_cycle);

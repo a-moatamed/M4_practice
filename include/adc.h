@@ -17,7 +17,9 @@ struct adc_common {
     volatile uint32_t CSR, RESERVED, CCR, CDR;
 };
 
-static void adc_init(void) {
+static void adc_init(uint16_t pin) {
+
+    GPIO(PINBANK(pin))->ASCR |= BIT(PINNO(pin));  // connect analog switch for PC5
     // Enable ADC clock and regulator
     RCC->AHB2ENR |= BIT(13);               // ADC clock enable
 
