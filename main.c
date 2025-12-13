@@ -24,14 +24,11 @@ int main(void)
     };
     
     const uint16_t buzzer = PIN('A', 15); // TIM2_CH1
-    const uint16_t led = PIN('B', 10);    // D10 -> TIM2_CH3
     struct timer *tim2 = TIM(2);
 
     gpio_set_mode(buzzer, GPIO_MODE_AF);
     gpio_set_af(buzzer, 1);  // TIM2 alternate function
 
-    gpio_set_mode(led, GPIO_MODE_AF);
-    gpio_set_af(led, 1);     // TIM2 alternate function
 
     setup_pwm(tim2); // ~1 kHz base, driven from 4 MHz clock
 

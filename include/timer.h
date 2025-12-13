@@ -35,10 +35,6 @@ static inline void setup_pwm(struct timer* t)
     t->CR1 |= BIT(7) | BIT(0);            // ARPE + counter enable
 }
 
-static inline void set_duty_cycle(struct timer* t, uint16_t val){
+static inline void set_duty_cycle(struct timer* t, uint16_t val){ // TODO: choose the channel 
     t->CCR1 = val; 
-}
-
-static inline void set_duty_cycle_ch3(struct timer* t, uint16_t val){
-    t->CCR3 = val;
 }
