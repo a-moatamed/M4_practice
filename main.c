@@ -1,46 +1,127 @@
-#include <inttypes.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include "gpio.h"
+// #pragma once
 #include "helper.h"
-#include "rcc.h"
-#include "systick.h"
-#include "timer.h"
-#include "uart.h"
-#include <stdio.h>
+
 
 #define CLOCK 4000000
 
-volatile uint32_t s_ticks = 0;
+void led_bar(uint32_t duty_cycle);
 
+
+// define leds
+uint16_t led1 = PIN('A', 4);  // D7
+uint16_t led2 = PIN('B', 1);  // D6
+uint16_t led3 = PIN('B', 4);  // D5
+uint16_t led4 = PIN('A', 3);  // D4
+uint16_t led5 = PIN('B', 0);  // D3
+uint16_t led6 = PIN('D', 14); // D2
+
+volatile uint32_t s_ticks = 0;
 
 int main(void)
 {
+    // initialize UART
+    uart_init(UART1, 115200); // set up PB6/PB7 as TX/RX and enable UART1    
 
-    struct  uart* uart = UART1;
-    uart_init(uart, 115200);
-    {
-        /* data */
-    };
-    
-    const uint16_t buzzer = PIN('A', 15); // TIM2_CH1
+    // setup the ADC
+    uint16_t pot = PIN('C', 5);
+    gpio_set_mode(pot, GPIO_MODE_ANALOG);
+        adc_init(pot);
+        spin(100000);   // REQUIRED: allow ADC to stabilize
+
+
+    // set up buzzer
+    const uint16_t buzzer = PIN('A', 2); // TIM2_CH1
     struct timer *tim2 = TIM(2);
-
     gpio_set_mode(buzzer, GPIO_MODE_AF);
-    gpio_set_af(buzzer, 1);  // TIM2 alternate function
+    gpio_set_af(buzzer, 1); // TIM2 alternate function
+    setup_pwm(tim2);        // ~1 kHz base, driven from 4 MHz clock
 
+    // choose the mode for the output
+    gpio_set_mode(led1, GPIO_MODE_OUTPUT);
+    gpio_set_mode(led2, GPIO_MODE_OUTPUT);
+    gpio_set_mode(led3, GPIO_MODE_OUTPUT);
+    gpio_set_mode(led4, GPIO_MODE_OUTPUT);
+    gpio_set_mode(led5, GPIO_MODE_OUTPUT);
+    gpio_set_mode(led6, GPIO_MODE_OUTPUT);
 
-    setup_pwm(tim2); // ~1 kHz base, driven from 4 MHz clock
+    uint32_t duty_cycle = 0;
 
-    while (1) {
-        for (int step = 0; step <= 100; ++step) {
+    while (1)
+    {
 
-            uint16_t duty = (uint16_t)(step * 10); // 0..1000 within ARR
-            set_duty_cycle(tim2, duty);
-            set_duty_cycle_ch3(tim2, duty);
-            printf("the pwm value is: %d\r\n", duty);
+        duty_cycle = (uint32_t)((adc_read_avg(16) * 100) / 4095); // average 16 samples to smooth noise
 
-            spin(40000);                         // ~10 ms at 4 MHz, ~1 s per sweep
-        }
+        led_bar(duty_cycle);
+        set_duty_cycle(tim2, duty_cycle);
+        printf("DUTY CYCLE VALUE: %lu\r\n", duty_cycle);
+        spin(20000); // simple throttle to avoid flooding the UART
     }
 }
+
+void led_bar(uint32_t duty_cycle)
+{
+    if (duty_cycle >= 90)
+    {
+        gpio_write(led1, true);
+        gpio_write(led2, true);
+        gpio_write(led3, true);
+        gpio_write(led4, true);
+        gpio_write(led5, true);
+        gpio_write(led6, true);
+    }
+    else if (duty_cycle >= 80)
+    {
+        gpio_write(led1, true);
+        gpio_write(led2, true);
+        gpio_write(led3, true);
+        gpio_write(led4, true);
+        gpio_write(led5, true);
+        gpio_write(led6, false);
+    }
+    else if (duty_cycle >= 70)
+    {
+        gpio_write(led1, true);
+        gpio_write(led2, true);
+        gpio_write(led3, true);
+        gpio_write(led4, true);
+        gpio_write(led5, false);
+        gpio_write(led6, false);
+    }
+    else if (duty_cycle >= 60)
+    {
+        gpio_write(led1, true);
+        gpio_write(led2, true);
+        gpio_write(led3, true);
+        gpio_write(led4, false);
+        gpio_write(led5, false);
+        gpio_write(led6, false);
+    }
+    else if (duty_cycle >= 50)
+    {
+        gpio_write(led1, true);
+        gpio_write(led2, true);
+        gpio_write(led3, false);
+        gpio_write(led4, false);
+        gpio_write(led5, false);
+        gpio_write(led6, false);
+    }
+    else if (duty_cycle >= 40)
+    {
+        gpio_write(led1, true);
+        gpio_write(led2, false);
+        gpio_write(led3, false);
+        gpio_write(led4, false);
+        gpio_write(led5, false);
+        gpio_write(led6, false);
+    }
+    else
+    {
+        gpio_write(led1, false);
+        gpio_write(led2, false);
+        gpio_write(led3, false);
+        gpio_write(led4, false);
+        gpio_write(led5, false);
+        gpio_write(led6, false);
+    }
+}
+
