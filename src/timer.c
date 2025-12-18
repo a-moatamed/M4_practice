@@ -26,5 +26,5 @@ void setup_pwm(struct timer* t)
 }
 
 void set_duty_cycle(struct timer* t, uint32_t val){ // TODO: choose the channel 
-    t->CCR3 = val; 
+    t->CCR1 = val; 
 }

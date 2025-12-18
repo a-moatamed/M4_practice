@@ -30,7 +30,7 @@ int main(void)
 
 
     // set up buzzer
-    const uint16_t buzzer = PIN('A', 2); // TIM2_CH1
+    const uint16_t buzzer = PIN('A', 15); // TIM2_CH1
     struct timer *tim2 = TIM(2);
     gpio_set_mode(buzzer, GPIO_MODE_AF);
     gpio_set_af(buzzer, 1); // TIM2 alternate function
