@@ -3,9 +3,9 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stddef.h>
 
 #include "gpio.h"
-#include "helper.h"
 #include "rcc.h"
 #include "systick.h"
 #include "timer.h"
@@ -15,6 +15,10 @@
 
 
 #define BIT(x) (1UL << (x))
+
+#define PIN(bank, num) ((((bank) - 'A') << 8) | (num))
+#define PINNO(pin) (pin & 255)
+#define PINBANK(pin) (pin >> 8)
 
 static inline void spin(volatile uint32_t count) {
   while (count--) asm("nop");

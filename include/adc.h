@@ -18,6 +18,11 @@ struct adc_common
 };
 
 void adc_init(uint16_t pin);
+void adc_init_async_start(uint16_t pin);
+bool adc_init_async_poll(uint32_t now);
 
 uint16_t adc_read(void);
 uint16_t adc_read_avg(uint8_t samples);
+void adc_start(void);
+bool adc_ready(void);
+uint16_t adc_read_result(void);

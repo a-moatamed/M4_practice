@@ -24,6 +24,18 @@ void uart_write_byte(struct uart *uart, uint8_t byte)
         spin(1);
 }
 
+int uart_write_ready(struct uart *uart)
+{
+    return (uart->ISR & BIT(7)) != 0;
+}
+
+int uart_write_byte_nb(struct uart *uart, uint8_t byte)
+{
+    if (!uart_write_ready(uart)) return 0;
+    uart->TDR = byte;
+    return 1;
+}
+
 
 void uart_write_buf(struct uart *uart, char *buf, size_t len)
 {
@@ -83,5 +95,4 @@ int _write(int fd, char *ptr, int len) {
   if (fd == 1) uart_write_buf(UART1, ptr, (size_t) len);
   return -1;
 }
-
 

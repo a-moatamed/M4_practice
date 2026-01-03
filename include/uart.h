@@ -17,7 +17,9 @@ struct uart
 
 int uart_read_ready(struct uart *uart);
 uint8_t uart_read_byte(struct uart *uart);
+int uart_write_ready(struct uart *uart);
 void uart_write_byte(struct uart *uart, uint8_t byte);
+int uart_write_byte_nb(struct uart *uart, uint8_t byte);
 void uart_write_buf(struct uart *uart, char *buf, size_t len);
 void uart_init(struct uart *uart, uint32_t baud);
 

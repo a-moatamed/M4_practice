@@ -3,9 +3,6 @@
 #include "helper.h"
 
 
-#define PIN(bank, num) ((((bank) - 'A') << 8) | (num))
-#define PINNO(pin) (pin & 255)
-#define PINBANK(pin) (pin >> 8)
 #define GPIO(bank) ((struct gpio *) (0x48000000 + 0x400 * (bank))) 
 
 
