@@ -3,3 +3,11 @@ firmware.bin
 firmware.elf
 firmware.elf.map
 .vscode
+
+# macOS
+.DS_Store
+
+# Editor swap/backup files
+*.swp
+*.swo
+*.tmp
