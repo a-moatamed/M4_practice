@@ -1,4 +1,3 @@
-// #pragma once
 #include "helper.h"
 
 
@@ -13,7 +12,6 @@ static void uart_tx_enqueue(const char *buf, size_t len);
 static void uart_tx_service(void);
 
 
-// define leds
 uint16_t led1 = D0;
 uint16_t led2 = D1;
 uint16_t led3 = D2;
@@ -33,26 +31,21 @@ static uint16_t s_uart_tx_tail = 0;
 
 int main(void)
 {
-    // initialize UART
-    uart_init(UART1, 115200); // set up PB6/PB7 as TX/RX and enable UART1    
-
-    // 1 ms systick for non-blocking scheduling
+    uart_init(UART1, 115200);
     systick_init(CLOCK / 1000);
 
-    // setup the ADC
+    // ADC async setup
     uint16_t pot = A0;
     gpio_set_mode(pot, GPIO_MODE_ANALOG);
     adc_init_async_start(pot);
 
-
-    // set up buzzer
-    const uint16_t buzzer = D9; // TIM2_CH1
+    // PWM setup
+    const uint16_t buzzer = D9;
     struct timer *tim2 = TIM(2);
     gpio_set_mode(buzzer, GPIO_MODE_AF);
-    gpio_set_af(buzzer, 1); // TIM2 alternate function
-    setup_pwm(tim2);        // ~1 kHz base, driven from 4 MHz clock
+    gpio_set_af(buzzer, 1);
+    setup_pwm(tim2);
 
-    // choose the mode for the output
     gpio_set_mode(led1, GPIO_MODE_OUTPUT);
     gpio_set_mode(led2, GPIO_MODE_OUTPUT);
     gpio_set_mode(led3, GPIO_MODE_OUTPUT);
@@ -76,6 +69,7 @@ int main(void)
     while (1)
     {
         uint32_t now = s_ticks;
+        // Poll non-blocking ADC initialization
         if (!adc_initialized) {
             adc_initialized = adc_init_async_poll(now);
         }
@@ -103,6 +97,7 @@ int main(void)
             set_duty_cycle(tim2, duty_cycle);
         }
 
+        // Periodic UART report
         if (timer_expired(&uart_timer, UART_PRINT_PERIOD_MS, now)) {
             char msg[64];
             int len = snprintf(msg, sizeof(msg), "DUTY CYCLE VALUE: %lu\r\n", duty_cycle);

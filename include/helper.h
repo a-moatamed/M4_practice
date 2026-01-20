@@ -12,21 +12,18 @@
 #include "uart.h"
 #include "adc.h"
 
-
-
 #define BIT(x) (1UL << (x))
 
 #define PIN(bank, num) ((((bank) - 'A') << 8) | (num))
 #define PINNO(pin) (pin & 255)
 #define PINBANK(pin) (pin >> 8)
 
+// Simple delay loop for short waits.
 static inline void spin(volatile uint32_t count) {
   while (count--) asm("nop");
 }
 
 
-
-// Format: #define Dx ('PORT', PIN)
 
 // UART
 #define D0  PIN('A', 1)   // RX
@@ -52,8 +49,6 @@ static inline void spin(volatile uint32_t count) {
 #define D14 PIN('B', 9)   // SDA
 #define D15 PIN('B', 8)   // SCL
 
-
-// Format: #define Ax ('PORT', PIN)
 
 // Analog inputs
 #define A0 PIN('C', 5)
