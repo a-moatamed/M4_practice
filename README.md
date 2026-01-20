@@ -1,9 +1,10 @@
 # Force-Controlled LED Bar + Buzzer (STM32 Cortex-M4)
 
-A bare-metal firmware project that reads a force sensor (via ADC) and turns on a 10-step LED bar while sweeping a buzzer tone. Higher force increases both the number of lit LEDs and the PWM duty cycle driving the buzzer.
+A bare-metal firmware project that reads a force sensor (via ADC) and turns on a 10-step LED bar while driving a buzzer with PWM. Higher force increases both the number of lit LEDs and the PWM duty cycle driving the buzzer.
 
 ## Features
-- ADC sampling with simple averaging for stability.
+- Non-blocking ADC sampling with averaged batches.
+- Non-linear scaling and deadzone for FSR402 behavior.
 - 10-step LED bar visualization.
 - PWM output for a buzzer with duty cycle tied to sensor input.
 - UART logging for quick debugging.
@@ -88,7 +89,8 @@ Connect the FSR402 to `A0` in a voltage divider and apply force. The LED bar fil
 
 ## Notes
 - The PWM base is set in `setup_pwm()` (see `src/timer.c`).
-- ADC values are scaled to 0..100 and mapped to 10 LED steps.
+- ADC samples are averaged in the main loop (non-blocking).
+- Output uses a quadratic curve plus a deadzone, then maps to 10 LED steps.
 
 
 

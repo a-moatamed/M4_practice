@@ -3,6 +3,7 @@
 
 
 
+// RCC register map.
 struct rcc {
     volatile uint32_t CR, ICSCR, CFGR, PLLCFGR, PLLSAI1CFGR, PLLSAI2CFGR;
     volatile uint32_t CIER, CIFR, CICR, RESERVED0;
@@ -16,4 +17,3 @@ struct rcc {
 };
 
 #define RCC ((struct rcc *)0x40021000)
-

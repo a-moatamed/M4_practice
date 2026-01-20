@@ -3,6 +3,7 @@
 #define ADC ((struct adc *)0x50040000)
 #define ADC_COMMON_BASE 0x50040300U
 
+// ADC register map.
 struct adc
 {
     volatile uint32_t ISR, IER, CR, CFGR, CFGR2,
@@ -11,25 +12,37 @@ struct adc
         AWD3CR, RESERVED7[2], DIFSEL, CALFACT;
 };
 
+// ADC common register map.
 struct adc_common
 {
     volatile uint32_t CSR, RESERVED, CCR, CDR;
 };
 
-// Initialize ADC for a given analog pin (blocking).
-void adc_init(uint16_t pin);
-// Begin non-blocking ADC initialization.
+/**
+ * @brief Start non-blocking ADC initialization.
+ * @param pin Analog pin ID (e.g., A0).
+ *
+ * Call adc_init_async_poll() until it returns true.
+ */
 void adc_init_async_start(uint16_t pin);
-// Poll non-blocking ADC initialization; returns true when ready.
+/**
+ * @brief Poll non-blocking ADC initialization state.
+ * @param now Current tick time (typically milliseconds).
+ * @return true when ADC is initialized and ready.
+ */
 bool adc_init_async_poll(uint32_t now);
 
-// Read a single ADC sample (blocking).
-uint16_t adc_read(void);
-// Read and average multiple ADC samples.
-uint16_t adc_read_avg(uint8_t samples);
-// Start a conversion without blocking.
+/**
+ * @brief Start an ADC conversion without blocking.
+ */
 void adc_start(void);
-// Return true when conversion is complete.
+/**
+ * @brief Check whether the current conversion is complete.
+ * @return true when a conversion result is ready.
+ */
 bool adc_ready(void);
-// Read conversion result (call when ready).
+/**
+ * @brief Read the most recent conversion result.
+ * @return 12-bit ADC result.
+ */
 uint16_t adc_read_result(void);

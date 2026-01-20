@@ -11,24 +11,6 @@ enum adc_init_state {
 static enum adc_init_state s_adc_state = ADC_INIT_IDLE;
 static uint32_t s_adc_wait = 0;
 
-void adc_init(uint16_t pin) {
-    GPIO(PINBANK(pin))->ASCR |= BIT(PINNO(pin));
-    RCC->AHB2ENR |= BIT(13);
-    ADC->CR = 0;
-    ((struct adc_common *) ADC_COMMON_BASE)->CCR |= BIT(16);
-    ADC->CR |= BIT(28);
-    spin(1000);
-
-    ADC->CR |= BIT(31);
-    while (ADC->CR & BIT(31)) (void) 0;
-
-    ADC->SMPR2 = (7U << 12);
-    ADC->SQR1 = (14U << 6);
-
-    ADC->ISR |= BIT(0);
-    ADC->CR |= BIT(0);
-    while ((ADC->ISR & BIT(0)) == 0) (void) 0;
-}
 
 void adc_init_async_start(uint16_t pin) {
     s_adc_state = ADC_INIT_WAIT_REG;
@@ -69,22 +51,6 @@ bool adc_init_async_poll(uint32_t now) {
     }
 }
 
-uint16_t adc_read(void) {
-    ADC->CR |= BIT(2);
-    while ((ADC->ISR & BIT(2)) == 0) (void) 0;
-    return (uint16_t) ADC->DR;
-}
-
-
-uint16_t adc_read_avg(uint8_t samples) {
-    if (samples == 0) return 0;
-
-    uint32_t acc = 0;
-    for (uint8_t i = 0; i < samples; i++) {
-        acc += adc_read();
-    }
-    return (uint16_t)(acc / samples);
-}
 
 void adc_start(void) {
     ADC->CR |= BIT(2);

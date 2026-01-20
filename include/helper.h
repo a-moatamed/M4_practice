@@ -18,7 +18,10 @@
 #define PINNO(pin) (pin & 255)
 #define PINBANK(pin) (pin >> 8)
 
-// Simple delay loop for short waits.
+/**
+ * @brief Busy-wait for a short delay.
+ * @param count Loop count; larger values wait longer.
+ */
 static inline void spin(volatile uint32_t count) {
   while (count--) asm("nop");
 }

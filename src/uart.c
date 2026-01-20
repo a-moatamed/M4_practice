@@ -1,15 +1,5 @@
 #include "uart.h"
 
-int uart_read_ready(struct uart *uart)
-{
-    return uart->ISR & BIT(5);
-}
-
-uint8_t uart_read_byte(struct uart *uart)
-{
-    return (uint8_t)(uart->RDR & 255);
-}
-
 void uart_write_byte(struct uart *uart, uint8_t byte)
 {
     uart->TDR = byte;

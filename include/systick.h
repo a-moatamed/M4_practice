@@ -6,15 +6,30 @@
 
 #define SYSTICK ((struct systick *) 0xe000e010)
 
+// SysTick register map.
 struct systick{
     volatile uint32_t CTRL, LOAD, VAL, CALIB;
 };
 
+// Global millisecond tick counter.
 extern volatile uint32_t s_ticks;
 
-// SysTick interrupt handler increments the tick counter.
+/**
+ * @brief SysTick interrupt handler.
+ *
+ * Increments the global tick counter.
+ */
 void SysTick_Handler(void);
-// Return true when the period has elapsed since the last expiry.
+/**
+ * @brief Check whether a period has elapsed since the last expiry.
+ * @param t Pointer to the next expiration time (maintained by the helper).
+ * @param prd Period in ticks.
+ * @param now Current tick time.
+ * @return true when the period has elapsed.
+ */
 bool timer_expired(uint32_t *t, uint32_t prd, uint32_t now);
-// Initialize SysTick with the given reload value.
+/**
+ * @brief Initialize the SysTick timer.
+ * @param ticks Reload value for the desired tick interval.
+ */
 void systick_init(uint32_t ticks);

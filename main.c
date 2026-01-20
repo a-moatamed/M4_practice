@@ -92,7 +92,17 @@ int main(void)
             adc_acc = 0;
             adc_count = 0;
 
-            duty_cycle = (uint32_t)((adc_avg * 100U) / 4095U);
+            // FSR402 is non-linear; use quadratic curve to reduce low-force sensitivity.
+            {
+                uint32_t scaled = (uint32_t)adc_avg * (uint32_t)adc_avg;
+                duty_cycle = (scaled * 100U) / (4095U * 4095U);
+                if (duty_cycle <= 30U) {
+                    duty_cycle = 0;
+                } else {
+                    duty_cycle = ((duty_cycle - 30U) * 100U) / 70U;
+                    if (duty_cycle > 100U) duty_cycle = 100U;
+                }
+            }
             led_bar(duty_cycle);
             set_duty_cycle(tim2, duty_cycle);
         }
@@ -108,152 +118,6 @@ int main(void)
     }
 }
 
-void led_bar(uint32_t duty_cycle)
-{
-    if (duty_cycle >= 90)
-    {
-        gpio_write(led1, true);
-        gpio_write(led2, true);
-        gpio_write(led3, true);
-        gpio_write(led4, true);
-        gpio_write(led5, true);
-        gpio_write(led6, true);
-        gpio_write(led7, true);
-        gpio_write(led8, true);
-        gpio_write(led9, true);
-        gpio_write(led10, true);
-    }
-    else if (duty_cycle >= 80)
-    {
-        gpio_write(led1, true);
-        gpio_write(led2, true);
-        gpio_write(led3, true);
-        gpio_write(led4, true);
-        gpio_write(led5, true);
-        gpio_write(led6, true);
-        gpio_write(led7, true);
-        gpio_write(led8, true);
-        gpio_write(led9, true);
-        gpio_write(led10, false);
-    }
-    else if (duty_cycle >= 70)
-    {
-        gpio_write(led1, true);
-        gpio_write(led2, true);
-        gpio_write(led3, true);
-        gpio_write(led4, true);
-        gpio_write(led5, true);
-        gpio_write(led6, true);
-        gpio_write(led7, true);
-        gpio_write(led8, true);
-        gpio_write(led9, false);
-        gpio_write(led10, false);
-    }
-    else if (duty_cycle >= 60)
-    {
-        gpio_write(led1, true);
-        gpio_write(led2, true);
-        gpio_write(led3, true);
-        gpio_write(led4, true);
-        gpio_write(led5, true);
-        gpio_write(led6, true);
-        gpio_write(led7, true);
-        gpio_write(led8, false);
-        gpio_write(led9, false);
-        gpio_write(led10, false);
-    }
-    else if (duty_cycle >= 50)
-    {
-        gpio_write(led1, true);
-        gpio_write(led2, true);
-        gpio_write(led3, true);
-        gpio_write(led4, true);
-        gpio_write(led5, true);
-        gpio_write(led6, true);
-        gpio_write(led7, false);
-        gpio_write(led8, false);
-        gpio_write(led9, false);
-        gpio_write(led10, false);
-    }
-    else if (duty_cycle >= 40)
-    {
-        gpio_write(led1, true);
-        gpio_write(led2, true);
-        gpio_write(led3, true);
-        gpio_write(led4, true);
-        gpio_write(led5, true);
-        gpio_write(led6, false);
-        gpio_write(led7, false);
-        gpio_write(led8, false);
-        gpio_write(led9, false);
-        gpio_write(led10, false);
-    }
-    else if (duty_cycle >= 30)
-    {
-        gpio_write(led1, true);
-        gpio_write(led2, true);
-        gpio_write(led3, true);
-        gpio_write(led4, true);
-        gpio_write(led5, false);
-        gpio_write(led6, false);
-        gpio_write(led7, false);
-        gpio_write(led8, false);
-        gpio_write(led9, false);
-        gpio_write(led10, false);
-    }
-    else if (duty_cycle >= 20)
-    {
-        gpio_write(led1, true);
-        gpio_write(led2, true);
-        gpio_write(led3, true);
-        gpio_write(led4, false);
-        gpio_write(led5, false);
-        gpio_write(led6, false);
-        gpio_write(led7, false);
-        gpio_write(led8, false);
-        gpio_write(led9, false);
-        gpio_write(led10, false);
-    }
-    else if (duty_cycle >= 10)
-    {
-        gpio_write(led1, true);
-        gpio_write(led2, true);
-        gpio_write(led3, false);
-        gpio_write(led4, false);
-        gpio_write(led5, false);
-        gpio_write(led6, false);
-        gpio_write(led7, false);
-        gpio_write(led8, false);
-        gpio_write(led9, false);
-        gpio_write(led10, false);
-    }
-    else if (duty_cycle >= 5)
-    {
-        gpio_write(led1, true);
-        gpio_write(led2, false);
-        gpio_write(led3, false);
-        gpio_write(led4, false);
-        gpio_write(led5, false);
-        gpio_write(led6, false);
-        gpio_write(led7, false);
-        gpio_write(led8, false);
-        gpio_write(led9, false);
-        gpio_write(led10, false);
-    }
-    else
-    {
-        gpio_write(led1, false);
-        gpio_write(led2, false);
-        gpio_write(led3, false);
-        gpio_write(led4, false);
-        gpio_write(led5, false);
-        gpio_write(led6, false);
-        gpio_write(led7, false);
-        gpio_write(led8, false);
-        gpio_write(led9, false);
-        gpio_write(led10, false);
-    }
-}
 
 static void uart_tx_enqueue(const char *buf, size_t len)
 {
@@ -271,4 +135,21 @@ static void uart_tx_service(void)
         (void)uart_write_byte_nb(UART1, (uint8_t)s_uart_tx_buf[s_uart_tx_tail]);
         s_uart_tx_tail = (uint16_t)((s_uart_tx_tail + 1U) % UART_TX_BUF_SIZE);
     }
+}
+
+
+
+void led_bar(uint32_t duty_cycle)
+{
+    uint8_t level = (uint8_t)(duty_cycle / 10U);
+    gpio_write(led1, level >= 1);
+    gpio_write(led2, level >= 2);
+    gpio_write(led3, level >= 3);
+    gpio_write(led4, level >= 4);
+    gpio_write(led5, level >= 5);
+    gpio_write(led6, level >= 6);
+    gpio_write(led7, level >= 7);
+    gpio_write(led8, level >= 8);
+    gpio_write(led9, level >= 9);
+    gpio_write(led10, level >= 10);
 }

@@ -8,25 +8,50 @@
 
 #define FREQ 4000000
 
+// UART register map.
 struct uart
 {
     volatile uint32_t CR1, CR2, CR3, BRR, GTPR, GTOR, RQR, ISR, ICR, RDR, TDR;
 };
 
-// Return non-zero when a byte can be read.
-int uart_read_ready(struct uart *uart);
-// Read one byte from the UART.
-uint8_t uart_read_byte(struct uart *uart);
-// Return non-zero when a byte can be written.
+/**
+ * @brief Check whether a byte can be written.
+ * @param uart UART instance.
+ * @return Non-zero if TX can accept a byte.
+ */
 int uart_write_ready(struct uart *uart);
-// Write one byte (blocking until sent).
+/**
+ * @brief Write one byte (blocking).
+ * @param uart UART instance.
+ * @param byte Byte to transmit.
+ */
 void uart_write_byte(struct uart *uart, uint8_t byte);
-// Write one byte without blocking; returns non-zero on success.
+/**
+ * @brief Write one byte without blocking.
+ * @param uart UART instance.
+ * @param byte Byte to transmit.
+ * @return Non-zero on success, zero if not ready.
+ */
 int uart_write_byte_nb(struct uart *uart, uint8_t byte);
-// Write a buffer of bytes (blocking).
+/**
+ * @brief Write a buffer of bytes (blocking).
+ * @param uart UART instance.
+ * @param buf Data buffer.
+ * @param len Number of bytes to write.
+ */
 void uart_write_buf(struct uart *uart, char *buf, size_t len);
-// Initialize UART pins and baud rate.
+/**
+ * @brief Initialize UART pins and baud rate.
+ * @param uart UART instance.
+ * @param baud Baud rate (e.g., 115200).
+ */
 void uart_init(struct uart *uart, uint32_t baud);
 
-// Redirect libc write calls to UART1.
+/**
+ * @brief Redirect libc write calls to UART1.
+ * @param fd File descriptor.
+ * @param ptr Buffer to write.
+ * @param len Number of bytes.
+ * @return -1 on failure, otherwise number of bytes written if supported.
+ */
 int _write(int fd, char *ptr, int len);
